@@ -10,11 +10,6 @@ import (
 	"os"
 )
 
-var Reset = "\033[0m"
-var Red = "\033[31m"
-var Green = "\033[32m"
-var Yellow = "\033[33m"
-
 const (
 	DLLC_HighEntropyVirtualAddressSpace = 0x32
 	DLLC_DynamicBase                    = 0x40
@@ -37,8 +32,8 @@ var numberOfSections uint16
 var PE32_IMAGE_MAGIC = []byte{0x0b, 0x01}
 var PE64_IMAGE_MAGIC = []byte{0x0b, 0x02}
 
-func pad(def string, msg string, msgColor string) string {
-	return fmt.Sprintf("%-15s%s\n", def+":", msgColor+msg+Reset)
+func pad(def string, msg string) string {
+	return fmt.Sprintf("%-15s%s\n", def+":", msg)
 }
 
 func parseDLLCharacteristics(v uint16) string {
@@ -71,19 +66,19 @@ func parseDLLCharacteristics(v uint16) string {
 		// no relocs!
 		if !hasReloc {
 			hasASLR = false
-			info += pad("ASLR", "disabled (no relocations)", Yellow)
+			info += pad("ASLR", "disabled (no relocations)")
 		} else {
 			// high entropy
 			if v&DLLC_HighEntropyVirtualAddressSpace != 0 {
-				info += pad("ASLR", "enabled (high entropy)", Green)
+				info += pad("ASLR", "enabled (high entropy)")
 			} else {
 				// base
-				info += pad("ASLR", "enabled (base)", Yellow)
+				info += pad("ASLR", "enabled (base)")
 			}
 		}
 	} else {
 		hasASLR = false
-		info += pad("ASLR", "disabled", Red)
+		info += pad("ASLR", "disabled")
 	}
 
 	// Get IMAGE_BASE
@@ -99,28 +94,28 @@ func parseDLLCharacteristics(v uint16) string {
 			f.Read(buffer)
 			IMAGE_BASE = binary.LittleEndian.Uint64(buffer)
 		}
-		info += fmt.Sprintf("%-15s" + Red + "0x%x\n" + Reset, "Image Base:",IMAGE_BASE)
+		info += fmt.Sprintf("%-15s0x%x\n","Image Base:",IMAGE_BASE)
 	}
 
 	// DEP
 	if v&DLLC_NXCompatible != 0 {
-		info += pad("DEP", "enabled", Green)
+		info += pad("DEP", "enabled")
 	} else {
-		info += pad("DEP", "disabled", Red)
+		info += pad("DEP", "disabled")
 	}
 
 	// CFG
 	if v&DLLC_ControlFlowGuard != 0 {
-		info += pad("CFG", "enabled", Green)
+		info += pad("CFG", "enabled")
 	} else {
-		info += pad("CFG", "disabled", Red)
+		info += pad("CFG", "disabled")
 	}
 
 	// SEH
 	if pe == PE64 {
-		info += pad("SafeSEH", "disabled (not available for 64-bit binaries)", Green)
+		info += pad("SafeSEH", "disabled (not available for 64-bit binaries)")
 	} else if v&DLLC_NoSeh != 0 {
-		info += pad("SafeSEH", "disabled", Red)
+		info += pad("SafeSEH", "disabled")
 	} else {
 		// find IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG
 		buffer := make([]byte, 4)
@@ -134,9 +129,9 @@ func parseDLLCharacteristics(v uint16) string {
 		}
 		ENTRY_LOAD_CONFIG_RVA := binary.LittleEndian.Uint32(buffer)
 		if ENTRY_LOAD_CONFIG_RVA == 0 {
-			info += pad("SafeSEH", "disabled", Red)
+			info += pad("SafeSEH", "disabled")
 		} else {
-			info += pad("SafeSEH", "enabled", Green)
+			info += pad("SafeSEH", "enabled")
 		}
 	}
 	return info
@@ -181,10 +176,10 @@ func main() {
 	}
 	if bytes.Equal(IMAGE_magic, PE32_IMAGE_MAGIC) {
 		pe = PE32
-		fmt.Print(pad("Type", "PE32", ""))
+		fmt.Print(pad("Type", "PE32"))
 	} else {
 		pe = PE64
-		fmt.Print(pad("Type", "PE32+", ""))
+		fmt.Print(pad("Type", "PE32+"))
 	}
 
 	// find NumberOfRvaAndSizes
