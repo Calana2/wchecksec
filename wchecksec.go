@@ -1,8 +1,8 @@
 package main
 
-/* This program is highly unreadable, I'm sorry for that
- * After all, it is just an implementation for learning purposes.
-*/
+/* Spaguetti code go!
+ */
+
 import (
 	"bytes"
 	"encoding/binary"
@@ -32,8 +32,139 @@ var numberOfSections uint16
 var PE32_IMAGE_MAGIC = []byte{0x0b, 0x01}
 var PE64_IMAGE_MAGIC = []byte{0x0b, 0x02}
 
+type IMAGE_SECTION_HEADER struct {
+	Name             [8]byte
+	VirtualSize      uint32
+	VirtualAddress   uint32
+	SizeOfRawData    uint32
+	PointerToRawData uint32
+	// omit the rest of the fields...
+}
+
+type ENTRY_LOAD_CONFIG_DIRECTORY struct {
+	Size                    uint32
+	TimeDateStamp           uint32
+	MajorVersion            uint16
+	MinorVersion            uint16
+	GlobalFlagsClear        uint32
+	GlobalFlagsSet          uint32
+	CriticalSectionTimeout  uint32
+	DeCommitFreeThreshold   uint64 // PE32/PE64 dependent
+	DeCommitTotalThreshold  uint64 // PE32/PE64 dependent
+	LockPrefixTable         uint64 // PE32/PE64 dependent
+	MaximumAllocationSize   uint64 // PE32/PE64 dependent
+	VirtualMemoryThreshold  uint64 // PE32/PE64 dependent
+	ProcessHeapFlags        uint64 // PE32/PE64 dependent
+	ProcessAffinityMask     uint32
+	CSDVersion              uint16
+	Reserved1               uint16
+	EditList                uint64 // PE32/PE64 dependent
+	SecurityCookie          uint64 // PE32/PE64 dependent
+	SEHandlerTable          uint64 // PE32/PE64 dependent
+	SEHandlerCount          uint64 // PE32/PE64 dependent
+	GuardCFCheckFunction    uint64 // PE32/PE64 dependent
+	GuardCFDispatchFunction uint64 // PE32/PE64 dependent
+	GuardCFFunctionTable    uint64 // PE32/PE64 dependent
+	GuardCFFunctionCount    uint64 // PE32/PE64 dependent
+	GuardFlags              uint32
+}
+
+func parseSectionHeaders(IMAGE_SECTION_BASE uint32) []*IMAGE_SECTION_HEADER {
+	var headers []*IMAGE_SECTION_HEADER
+	f, _ = os.Open(os.Args[1])
+	defer f.Close()
+	f.Seek(int64(IMAGE_SECTION_BASE), 0)
+	buffer := make([]byte, numberOfSections*0x28)
+	f.Read(buffer)
+	for i := 0; i < int(numberOfSections); i++ {
+		base := 0x28 * i
+    sh := &IMAGE_SECTION_HEADER{}
+		copy(sh.Name[:], buffer[base:base+8])
+		sh.VirtualSize = binary.LittleEndian.Uint32(buffer[base+8 : base+12])
+		sh.VirtualAddress = binary.LittleEndian.Uint32(buffer[base+12 : base+16])
+		sh.SizeOfRawData = binary.LittleEndian.Uint32(buffer[base+16 : base+20])
+		sh.PointerToRawData = binary.LittleEndian.Uint32(buffer[base+20 : base+24])
+		headers = append(headers, sh)
+	}
+	return headers
+}
+
+func parseLoadConfigDirectory(ENTRY_LOAD_CONFIG_ADDRESS uint32, is64 bool) *ENTRY_LOAD_CONFIG_DIRECTORY {
+  lcd  := &ENTRY_LOAD_CONFIG_DIRECTORY{SEHandlerTable: 0, SEHandlerCount: 0,SecurityCookie: 0}
+  if ENTRY_LOAD_CONFIG_ADDRESS == 0{
+    return lcd
+  }
+	f, _ = os.Open(os.Args[1])
+	defer f.Close()
+	f.Seek(int64(ENTRY_LOAD_CONFIG_ADDRESS), 0)
+	buf := make([]byte, 0x100)
+	f.Read(buf)
+	off := 0
+
+	lcd.Size = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.TimeDateStamp = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.MajorVersion = binary.LittleEndian.Uint16(buf[off : off+2])
+	off += 2
+	lcd.MinorVersion = binary.LittleEndian.Uint16(buf[off : off+2])
+	off += 2
+	lcd.GlobalFlagsClear = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.GlobalFlagsSet = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.CriticalSectionTimeout = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.DeCommitFreeThreshold = readUintPtr(buf, &off, is64)
+	lcd.DeCommitTotalThreshold = readUintPtr(buf, &off, is64)
+	lcd.LockPrefixTable = readUintPtr(buf, &off, is64)
+	lcd.MaximumAllocationSize = readUintPtr(buf, &off, is64)
+	lcd.VirtualMemoryThreshold = readUintPtr(buf, &off, is64)
+
+	lcd.ProcessHeapFlags = readUintPtr(buf, &off, is64)
+	lcd.ProcessAffinityMask = binary.LittleEndian.Uint32(buf[off : off+4])
+	off += 4
+	lcd.CSDVersion = binary.LittleEndian.Uint16(buf[off : off+2])
+	off += 2
+	lcd.Reserved1 = binary.LittleEndian.Uint16(buf[off : off+2])
+	off += 2
+
+	lcd.EditList = readUintPtr(buf, &off, is64)
+	lcd.SecurityCookie = readUintPtr(buf, &off, is64)
+	lcd.SEHandlerTable = readUintPtr(buf, &off, is64)
+	lcd.SEHandlerCount = readUintPtr(buf, &off, is64)
+	lcd.GuardCFCheckFunction = readUintPtr(buf, &off, is64)
+	lcd.GuardCFDispatchFunction = readUintPtr(buf, &off, is64)
+	lcd.GuardCFFunctionTable = readUintPtr(buf, &off, is64)
+	lcd.GuardCFFunctionCount = readUintPtr(buf, &off, is64)
+	lcd.GuardFlags = binary.LittleEndian.Uint32(buf[off : off+4])
+	return lcd
+}
+
 func pad(def string, msg string) string {
 	return fmt.Sprintf("%-15s%s\n", def+":", msg)
+}
+
+func readUintPtr(data []byte, off *int, is64 bool) uint64 {
+	if is64 {
+		val := binary.LittleEndian.Uint64(data[*off : *off+8])
+		*off += 8
+		return val
+	}
+	val := uint64(binary.LittleEndian.Uint32(data[*off : *off+4]))
+	*off += 4
+	return val
+}
+
+func rvaToOffset(rva uint32, sections []*IMAGE_SECTION_HEADER) uint32 {
+	for _, sec := range sections {
+		start := sec.VirtualAddress
+		end := start + sec.SizeOfRawData
+		if rva >= start && rva < end {
+			return (rva - start) + sec.PointerToRawData
+		}
+	}
+	return 0
 }
 
 func parseDLLCharacteristics(v uint16) string {
@@ -41,24 +172,20 @@ func parseDLLCharacteristics(v uint16) string {
 	var info string
 	var hasASLR bool = true
 	var IMAGE_BASE uint64
+	var IMAGE_SECTION_HEADER_BASE int
+	if pe == PE32 {
+		IMAGE_SECTION_HEADER_BASE = int(e_lfanew + 0x18 + numberOfRvaAndSizes*8 + 0x60)
+	} else {
+		IMAGE_SECTION_HEADER_BASE = int(e_lfanew + 0x18 + numberOfRvaAndSizes*8 + 0x70)
+	}
+	var sectionHeaders []*IMAGE_SECTION_HEADER = parseSectionHeaders(uint32(IMAGE_SECTION_HEADER_BASE))
 	f, _ = os.Open(os.Args[1])
 
-	// ASLR
+	// ** ASLR (Address Space Layout Randomization)**
 	if v&DLLC_DynamicBase != 0 {
 		hasReloc := false
-		// iterate over section names
-		var IMAGE_SECTION_HEADER_BASE int
-		if pe == PE32 {
-			IMAGE_SECTION_HEADER_BASE = int(e_lfanew + 0x18 + numberOfRvaAndSizes*8 + 0x60)
-		} else {
-			IMAGE_SECTION_HEADER_BASE = int(e_lfanew + 0x18 + numberOfRvaAndSizes*8 + 0x70)
-		}
-		for i := 0; i < int(numberOfSections); i++ {
-			f.Seek(int64(IMAGE_SECTION_HEADER_BASE+0x28*i), 0)
-			buffer = make([]byte, 8)
-			f.Read(buffer)
-			sectionName := string(bytes.TrimRight(buffer, "\x00"))
-			if sectionName == ".reloc" {
+		for _, section := range sectionHeaders {
+			if string(section.Name[:]) == ".reloc" {
 				hasReloc = true
 				break
 			}
@@ -81,7 +208,7 @@ func parseDLLCharacteristics(v uint16) string {
 		info += pad("ASLR", "disabled")
 	}
 
-	// Get IMAGE_BASE
+	// Get OPTIONAL_HEADER.IMAGE_BASE
 	if !hasASLR {
 		if pe == PE32 {
 			buffer = make([]byte, 4)
@@ -94,56 +221,73 @@ func parseDLLCharacteristics(v uint16) string {
 			f.Read(buffer)
 			IMAGE_BASE = binary.LittleEndian.Uint64(buffer)
 		}
-		info += fmt.Sprintf("%-15s0x%x\n","Image Base:",IMAGE_BASE)
+		info += fmt.Sprintf("%-15s0x%x\n", "Image Base:", IMAGE_BASE)
 	}
 
-	// DEP
+	// ** DEP (Data Execution Prevention) **
 	if v&DLLC_NXCompatible != 0 {
 		info += pad("DEP", "enabled")
 	} else {
 		info += pad("DEP", "disabled")
 	}
 
-	// CFG
+	// ** CFG (Control Flow Guard) **
 	if v&DLLC_ControlFlowGuard != 0 {
 		info += pad("CFG", "enabled")
 	} else {
 		info += pad("CFG", "disabled")
 	}
+	// find IMAGE_DATA_DIRECTORY[] LOAD_CONFIG
+	buffer = make([]byte, 4)
+	if pe == PE32 {
+		f.Seek(int64(e_lfanew + 0x18 + 0x60 + 10 * 8),0)
+	} else {
+		f.Seek(int64(e_lfanew + 0x18 + 0x70 + 10 * 8),0)
+	}
+  f.Read(buffer)
+	ENTRY_LOAD_CONFIG_RVA := binary.LittleEndian.Uint32(buffer)
+	ENTRY_LOAD_CONFIG_ADDRESS := rvaToOffset(ENTRY_LOAD_CONFIG_RVA, sectionHeaders)
+	ConfigDirectory := parseLoadConfigDirectory(ENTRY_LOAD_CONFIG_ADDRESS, pe == PE64)
 
-	// SEH
+	// ** SafeSEH (Safe Structured Exception Handler) **
 	if pe == PE64 {
 		info += pad("SafeSEH", "disabled (not available for 64-bit binaries)")
 	} else if v&DLLC_NoSeh != 0 {
 		info += pad("SafeSEH", "disabled")
 	} else {
-		// find IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG
-		buffer := make([]byte, 4)
-		_, err := f.Seek(int64(e_lfanew+0x18+0xb0), 0)
-		if err != nil {
-			fmt.Println("Error setting offset to IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG_RVA: ", err)
-		}
-		_, err = f.Read(buffer)
-		if err != nil {
-			fmt.Println("Error reading IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG_RVA: ", err)
-		}
-		ENTRY_LOAD_CONFIG_RVA := binary.LittleEndian.Uint32(buffer)
-		if ENTRY_LOAD_CONFIG_RVA == 0 {
+		if ENTRY_LOAD_CONFIG_ADDRESS == 0 {
 			info += pad("SafeSEH", "disabled")
 		} else {
-			info += pad("SafeSEH", "enabled")
+			if ConfigDirectory.SEHandlerTable == 0 {
+				info += pad("SafeSEH", "disabled")
+			} else {
+			  info += pad("SafeSEH", "enabled")
+      }
 		}
+	}
+	// ** GS (Buffer security check) **
+	if ENTRY_LOAD_CONFIG_ADDRESS == 0 || ConfigDirectory.SecurityCookie == 0 {
+		info += pad("GS", "disabled")
+	} else {
+    f.Seek(int64(ConfigDirectory.SecurityCookie),0)
+    buffer := make([]byte,8)
+    f.Read(buffer)
+    if pe == PE64 {
+     info += pad("GS", fmt.Sprintf("enabled  (stack_cookie=0x%x)\n",binary.LittleEndian.Uint64(buffer))) 
+    } else {
+    info += pad("GS", fmt.Sprintf("enabled  (stack_cookie=0x%x)\n",binary.LittleEndian.Uint32(buffer[:4])))
+    }
 	}
 	return info
 }
 
 func main() {
-  // Usage
-  if(len(os.Args)) != 2 {
-    fmt.Printf("Usage: %s <file.exe>\n",os.Args[0])
-    os.Exit(1)
-  }
-   
+	// Usage
+	if (len(os.Args)) != 2 {
+		fmt.Printf("Usage: %s <file.exe>\n", os.Args[0])
+		os.Exit(1)
+	}
+
 	// open file
 	f, err := os.Open(os.Args[1])
 	if err != nil {

@@ -1,4 +1,7 @@
 # wchecksec
-Check PE protections
+Check PE protections (ASLR, DEP, CFG, SafeSEH, GS)
 
-<img width="873" height="500" alt="pot" src="https://github.com/user-attachments/assets/264c4ffb-d897-4107-873e-131f16f9bcfc" />
+Compile for Windows: `go build -o wchecksec wchecksec.go`
+
+Compile for Windows in Linux Environment: `go GOOS="windows" GOARCH="amd64" build wchecksec.go`
+
