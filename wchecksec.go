@@ -278,7 +278,7 @@ func main() {
 		fmt.Printf("Usage: %s <file.exe>\n", os.Args[0])
 		os.Exit(1)
 	} else if os.Args[1] == "-v" {
-		fmt.Println("wchecksec 1.0.0")
+		fmt.Println("wchecksec 1.0.1")
 		os.Exit(1)
 	}
 
