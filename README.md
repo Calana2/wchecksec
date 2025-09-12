@@ -1,7 +1,25 @@
 # wchecksec
-Check PE protections (ASLR, DEP, CFG, SafeSEH, GS)
+#### Check PE protections: ASLR, DEP, CFG, SafeSEH, GS, Isolation, Force Integrity, Authenticode
+**Built from scratch in Go.**
 
-<img width="1362" height="721" alt="2025-08-21-141800_1362x721_scrot" src="https://github.com/user-attachments/assets/6446a628-5e4f-438c-b2cd-eab0b3e934cc" />
+## PE Protections Checked
+- [x] **ASLR**                
+  - Base
+  - High Entropy
+  - Stripped relocations
+- [x] **GS**               
+  - Entry Load Config Directory assertion
+  - Heuristic pattern search
+- [x] **DEP**                   
+- [x] **CFG**                       
+- [x] **SafeSEH**               
+- [x] **Isolation**             
+- [x] **Force Integrity**
+- [x] **Authenticode**     
+
+## Miscellaneous Information
+- Machine               (Architecture)
+- .NET verification
 
 ## Build & Install
 ```
@@ -10,3 +28,4 @@ cd wchecksec
 chmod u+x install.sh
 sudo ./install.sh
 ```
+
