@@ -1,8 +1,5 @@
 package main
 
-/* Spaguetti code go!
- */
-
 import (
 	"bytes"
 	"encoding/binary"
@@ -416,7 +413,7 @@ func parseDLLCharacteristics(f *os.File, v uint16) string {
   WIN_CERT_SIZE := u32(buffer[4:8])
   if WIN_CERT_ADDRESS != 0 && WIN_CERT_SIZE != 0 {
 	 
-    buffer = make([]byte, 2)
+   buffer = make([]byte, 2)
    f.Seek(int64(WIN_CERT_ADDRESS) + 6, 0)
    f.Read(buffer)
    wCertificateType := u16(buffer)
