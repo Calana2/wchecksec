@@ -550,7 +550,7 @@ func main() {
 		// open file
 		f, err := os.Open(file)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening file: %s", err)
+			fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
 			os.Exit(1)
 		}
 		defer f.Close()
@@ -560,11 +560,13 @@ func main() {
 		buffer := make([]byte, 4)
 		_, err = f.Seek(0x3c, 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting offset to PE_SIGNATURE: %s", err)
+			fmt.Fprintf(os.Stderr, "Error setting offset to PE_SIGNATURE: %s\n", err)
+			os.Exit(1)
 		}
 		f.Read(buffer)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading PE_SIGNATURE: %s", err)
+			fmt.Fprintf(os.Stderr, "Error reading PE_SIGNATURE: %s\n", err)
+			os.Exit(1)
 		}
 		e_lfanew = u32(buffer)
 
@@ -575,11 +577,11 @@ func main() {
 		IMAGE_magic := make([]byte, 2)
 		_, err = f.Seek(int64(e_lfanew+0x18), 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_MAGIC: %s", err)
+			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_MAGIC: %s\n", err)
 		}
 		_, err = f.Read(IMAGE_magic)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading IMAGE_MAGIC: %s", err)
+			fmt.Fprintf(os.Stderr, "Error reading IMAGE_MAGIC: %s\n", err)
 		}
 		if bytes.Equal(IMAGE_magic, PE32_IMAGE_MAGIC) {
 			pe = PE32
@@ -610,11 +612,11 @@ func main() {
 			_, err = f.Seek(int64(e_lfanew+0x18+0x6c), 0)
 		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_NUMBER_OF_RVA_AND_SIZES: %s", err)
+			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_NUMBER_OF_RVA_AND_SIZES: %s\n", err)
 		}
 		_, err = f.Read(buffer)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading IMAGE_NUMBER_OF_RVA_AND_SIZES: %s", err)
+			fmt.Fprintf(os.Stderr, "Error reading IMAGE_NUMBER_OF_RVA_AND_SIZES: %s\n", err)
 		}
 		numberOfRvaAndSizes = u32(buffer)
 
@@ -622,11 +624,11 @@ func main() {
 		buffer = make([]byte, 2)
 		_, err = f.Seek(int64(e_lfanew+0x6), 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting offset to FILE_NUMBER_OF_SECTIONS: %s", err)
+			fmt.Fprintf(os.Stderr, "Error setting offset to FILE_NUMBER_OF_SECTIONS: %s\n", err)
 		}
 		_, err = f.Read(buffer)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading FILE_NUMBER_OF_SECTIONS: %s", err)
+			fmt.Fprintf(os.Stderr, "Error reading FILE_NUMBER_OF_SECTIONS: %s\n", err)
 		}
 		numberOfSections = u16(buffer)
 
@@ -634,11 +636,11 @@ func main() {
 		buffer = make([]byte, 2)
 		_, err = f.Seek(int64(e_lfanew+0x18+0x46), 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_DLLCharacteristics: %s", err)
+			fmt.Fprintf(os.Stderr, "Error setting offset to IMAGE_DLLCharacteristics: %s\n", err)
 		}
 		_, err = f.Read(buffer)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading IMAGE_DLLCharacteristics: %s", err)
+			fmt.Fprintf(os.Stderr, "Error reading IMAGE_DLLCharacteristics: %s\n", err)
 		}
 		DLLCharacteristics := u16(buffer)
 
