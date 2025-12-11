@@ -541,7 +541,7 @@ func isDotNETDirectory(f *os.File, e_lfanew int64) bool {
 func main() {
 	// Usage
 	if len(os.Args) < 2 || os.Args[1] == "-v" {
-		fmt.Println("wchecksec 1.1.2")
+		fmt.Println("wchecksec 1.1.1")
 		fmt.Printf("Usage: %s <file.exe>\n", os.Args[0])
 		os.Exit(1)
 	}
